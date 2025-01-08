@@ -123,6 +123,5 @@ public class CadastroAluno {
             this.objetivo = objetivo;
         }
 
-        // Getters e setters (opcional se precisar)
     }
 }
