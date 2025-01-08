@@ -170,9 +170,5 @@ public class CadastroAluno {
             this.altura = altura;
             this.objetivo = objetivo;
         }
-<<<<<<< HEAD
-=======
-
->>>>>>> 692fcc94989d9bc52c9fc7a13114ffd2adc06d06
     }
 }
