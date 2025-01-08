@@ -1,21 +1,22 @@
-package com.academia; 
+package com.academia;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import com.google.gson.Gson;
+import java.sql.*;
+import java.util.List;
+import java.util.ArrayList;
 
 public class CadastroAluno {
 
     public static void main(String[] args) {
-        // Criação da janela principal
         JFrame frame = new JFrame("Cadastro de Aluno - Academia");
         frame.setSize(400, 400);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setLayout(new GridLayout(7, 2));
 
-        // Criação dos campos
         JLabel nomeLabel = new JLabel("Nome:");
         JTextField nomeField = new JTextField();
 
@@ -31,13 +32,11 @@ public class CadastroAluno {
         JLabel objetivoLabel = new JLabel("Objetivo:");
         JTextField objetivoField = new JTextField();
 
-        // Botões
         JButton incluirButton = new JButton("Incluir");
         JButton limparButton = new JButton("Limpar");
         JButton apresentarButton = new JButton("Apresentar Dados");
         JButton sairButton = new JButton("Sair");
 
-        // Adiciona os componentes à janela
         frame.add(nomeLabel);
         frame.add(nomeField);
         frame.add(idadeLabel);
@@ -53,16 +52,28 @@ public class CadastroAluno {
         frame.add(apresentarButton);
         frame.add(sairButton);
 
-        // Ação do botão "Incluir"
         incluirButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                // Simula a inclusão no banco de dados (apenas mensagem por enquanto)
-                JOptionPane.showMessageDialog(frame, "Dados incluídos no banco de dados.");
+                String nome = nomeField.getText();
+                int idade;
+                float peso, altura;
+                String objetivo = objetivoField.getText();
+
+                try {
+                    idade = Integer.parseInt(idadeField.getText());
+                    peso = Float.parseFloat(pesoField.getText());
+                    altura = Float.parseFloat(alturaField.getText());
+                    incluirNoBanco(nome, idade, peso, altura, objetivo);
+                    JOptionPane.showMessageDialog(frame, "Aluno incluído com sucesso!");
+                } catch (NumberFormatException ex) {
+                    JOptionPane.showMessageDialog(frame, "Erro: Verifique os campos numéricos.", "Erro", JOptionPane.ERROR_MESSAGE);
+                } catch (SQLException ex) {
+                    JOptionPane.showMessageDialog(frame, "Erro ao inserir no banco de dados: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+                }
             }
         });
 
-        // Ação do botão "Limpar"
         limparButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -74,28 +85,20 @@ public class CadastroAluno {
             }
         });
 
-        // Ação do botão "Apresentar Dados"
         apresentarButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                // Coleta os dados preenchidos
-                String nome = nomeField.getText();
-                int idade = Integer.parseInt(idadeField.getText());
-                float peso = Float.parseFloat(pesoField.getText());
-                float altura = Float.parseFloat(alturaField.getText());
-                String objetivo = objetivoField.getText();
-
-                // Converte os dados para JSON
-                Gson gson = new Gson();
-                Aluno aluno = new Aluno(nome, idade, peso, altura, objetivo);
-                String json = gson.toJson(aluno);
-
-                // Apresenta os dados em formato JSON
-                JOptionPane.showMessageDialog(frame, "Dados em JSON:\n" + json);
+                try {
+                    List<Aluno> alunos = obterRegistrosDoBanco();
+                    Gson gson = new Gson();
+                    String json = gson.toJson(alunos);
+                    JOptionPane.showMessageDialog(frame, "Dados em JSON:\n" + json);
+                } catch (SQLException ex) {
+                    JOptionPane.showMessageDialog(frame, "Erro ao consultar o banco de dados: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+                }
             }
         });
 
-        // Ação do botão "Sair"
         sairButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -103,11 +106,56 @@ public class CadastroAluno {
             }
         });
 
-        // Exibe a janela
         frame.setVisible(true);
     }
 
-    // Classe para representar os dados do aluno
+    private static void incluirNoBanco(String nome, int idade, float peso, float altura, String objetivo) throws SQLException {
+        String url = "jdbc:mysql://localhost:3307/tp_final";
+        String user = "root";
+        String password = "";
+
+        String sql = "INSERT INTO academia (nome, idade, peso, altura, objetivo) VALUES (?, ?, ?, ?, ?)";
+
+        try (Connection connection = DriverManager.getConnection(url, user, password);
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            preparedStatement.setString(1, nome);
+            preparedStatement.setInt(2, idade);
+            preparedStatement.setFloat(3, peso);
+            preparedStatement.setFloat(4, altura);
+            preparedStatement.setString(5, objetivo);
+
+            preparedStatement.executeUpdate();
+        }
+    }
+
+    private static List<Aluno> obterRegistrosDoBanco() throws SQLException {
+        String url = "jdbc:mysql://localhost:3307/tp_final";
+        String user = "root";
+        String password = "";
+
+        String sql = "SELECT * FROM academia";
+        List<Aluno> alunos = new ArrayList<>();
+
+        try (Connection connection = DriverManager.getConnection(url, user, password);
+             PreparedStatement preparedStatement = connection.prepareStatement(sql);
+             ResultSet resultSet = preparedStatement.executeQuery()) {
+
+            while (resultSet.next()) {
+                String nome = resultSet.getString("nome");
+                int idade = resultSet.getInt("idade");
+                float peso = resultSet.getFloat("peso");
+                float altura = resultSet.getFloat("altura");
+                String objetivo = resultSet.getString("objetivo");
+
+                Aluno aluno = new Aluno(nome, idade, peso, altura, objetivo);
+                alunos.add(aluno);
+            }
+        }
+
+        return alunos;
+    }
+
     static class Aluno {
         private String nome;
         private int idade;
@@ -122,7 +170,5 @@ public class CadastroAluno {
             this.altura = altura;
             this.objetivo = objetivo;
         }
-
-        // Getters e setters (opcional se precisar)
     }
 }
